@@ -1,0 +1,101 @@
+
+import random
+
+# Helper function to generate a random DNA sequence
+def generate_random_dna_sequence(length):
+    return ''.join(random.choice(['A', 'T', 'C', 'G']) for _ in range(length))
+
+# Simulate a rose flower gene with specific regions (promoter, exon, intron)
+def generate_gene_structure(gene_length):
+    # Assuming the promoter region takes up 10%, exon takes up 30%, and intron the remaining 60%
+    promoter_length = int(gene_length * 0.1)
+    exon_length = int(gene_length * 0.3)
+    intron_length = gene_length - promoter_length - exon_length
+    
+    promoter_region = generate_random_dna_sequence(promoter_length)
+    exon_region = generate_random_dna_sequence(exon_length)
+    intron_region = generate_random_dna_sequence(intron_length)
+    
+    # Concatenate all regions to form the full gene
+    gene_sequence = promoter_region + exon_region + intron_region
+    
+    return {
+        "promoter": promoter_region,
+        "exon": exon_region,
+        "intron": intron_region,
+        "gene": gene_sequence
+    }
+
+# Function to identify CpG sites in any DNA sequence
+def find_cpg_sites(dna_sequence):
+    cpg_sites = []
+    for i in range(len(dna_sequence) - 1):
+        if dna_sequence[i:i + 2] == "CG":
+            cpg_sites.append(i)
+    return cpg_sites
+
+# Simulate the methylation of CpG sites, with a higher probability for promoter regions
+def methylate_cpg_sites(gene, cpg_sites, methylation_rate=0.7):
+    promoter_cpg_sites = [site for site in cpg_sites if site < len(gene['promoter'])]
+    exon_cpg_sites = [site for site in cpg_sites if len(gene['promoter']) <= site < len(gene['promoter']) + len(gene['exon'])]
+    intron_cpg_sites = [site for site in cpg_sites if site >= len(gene['promoter']) + len(gene['exon'])]
+    
+    # Methylation probabilities: Promoter regions have higher impact, so we simulate more frequent methylation
+    promoter_methylated = [site for site in promoter_cpg_sites if random.random() <= methylation_rate]
+    exon_methylated = [site for site in exon_cpg_sites if random.random() <= methylation_rate * 0.5]  # Lower rate for exons
+    intron_methylated = [site for site in intron_cpg_sites if random.random() <= methylation_rate * 0.3]  # Even lower for introns
+    
+    return promoter_methylated, exon_methylated, intron_methylated
+
+# Function to simulate the effect of methylation on gene expression
+def calculate_gene_expression(gene, promoter_methylated, exon_methylated, intron_methylated):
+    # Calculate CpG methylation percentages in each region
+    promoter_cpg_sites = find_cpg_sites(gene['promoter'])
+    exon_cpg_sites = find_cpg_sites(gene['exon'])
+    intron_cpg_sites = find_cpg_sites(gene['intron'])
+    
+    promoter_methylation_pct = (len(promoter_methylated) / len(promoter_cpg_sites)) * 100 if promoter_cpg_sites else 0
+    exon_methylation_pct = (len(exon_methylated) / len(exon_cpg_sites)) * 100 if exon_cpg_sites else 0
+    intron_methylation_pct = (len(intron_methylated) / len(intron_cpg_sites)) * 100 if intron_cpg_sites else 0
+    
+    # Methylation in the promoter has the most significant effect
+    promoter_effect = max(0, 100 - promoter_methylation_pct * 2)
+    exon_effect = max(0, 100 - exon_methylation_pct * 0.5)
+    intron_effect = 100  # Methylation in introns has little to no effect
+    
+    # Calculate overall gene expression by combining effects (weighted towards promoter)
+    overall_expression = (promoter_effect * 0.7) + (exon_effect * 0.2) + (intron_effect * 0.1)
+    
+    return max(overall_expression, 0)  # Ensure expression isn't below 0%
+
+# Main function to simulate gene methylation for a specific gene length
+def simulate_gene_methylation(gene_length, methylation_rate=0.7):
+    print(f"Simulating methylation for a rose flower gene of length {gene_length} bp...\n")
+    
+    # Generate a gene with distinct promoter, exon, and intron regions
+    gene = generate_gene_structure(gene_length)
+    print(f"Generated gene structure:")
+    print(f"  Promoter length: {len(gene['promoter'])} bp")
+    print(f"  Exon length: {len(gene['exon'])} bp")
+    print(f"  Intron length: {len(gene['intron'])} bp\n")
+    
+    # Identify CpG sites in the entire gene sequence
+    cpg_sites = find_cpg_sites(gene['gene'])
+    print(f"Found {len(cpg_sites)} CpG sites in the entire gene sequence.\n")
+
+    # Simulate methylation of CpG sites
+    promoter_methylated, exon_methylated, intron_methylated = methylate_cpg_sites(gene, cpg_sites, methylation_rate)
+    print(f"Methylated CpG sites:")
+    print(f"  Promoter: {len(promoter_methylated)} / {len(find_cpg_sites(gene['promoter']))}")
+    print(f"  Exon: {len(exon_methylated)} / {len(find_cpg_sites(gene['exon']))}")
+    print(f"  Intron: {len(intron_methylated)} / {len(find_cpg_sites(gene['intron']))}\n")
+
+    # Simulate gene expression based on methylation
+    expression_level = calculate_gene_expression(gene, promoter_methylated, exon_methylated, intron_methylated)
+    print(f"Estimated gene expression level: {expression_level:.2f}%\n")
+    
+    return gene, cpg_sites, promoter_methylated, exon_methylated, intron_methylated, expression_level
+
+# Example of simulating a rose flower gene with 1000 base pairs
+gene_length = 1000  # Length of the gene sequence in base pairs
+simulate_gene_methylation(gene_length)
